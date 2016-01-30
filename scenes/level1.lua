@@ -83,6 +83,33 @@ function scene:show( event )
 	end
 end
 
+-- touch listener function
+-- Need to store which one was touched because others will still have "moved" called when dragging over
+local touchedObject
+function objectTouch( event )
+	local target = event.target
+
+    if event.phase == "began" then
+    	
+    	touchedObject = target;
+        target.markX = target.x    -- store x location of object
+        target.markY = target.y    -- store y location of object
+    
+    elseif event.phase == "moved" then
+
+    	if not (target == touchedObject) then
+    		return
+    	end
+    
+        local x = (event.x - event.xStart) + target.markX
+        local y = (event.y - event.yStart) + target.markY
+        
+        target.x, target.y = x, y    -- move object based on calculations above
+    end
+    
+    return true
+end
+
 function createBombs(sceneGroup)
 
 	for i=1,4 do 
@@ -90,6 +117,7 @@ function createBombs(sceneGroup)
 		table.insert(bombs, bomb)
 		bomb.x = slotWidth / 2 + i * slotWidth + screenW
 		bomb.y = screenH - slotWidth / 2 - 40
+		bomb:addEventListener( "touch", objectTouch )
 
 		sceneGroup:insert( bomb )
 		
