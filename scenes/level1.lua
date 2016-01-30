@@ -7,6 +7,8 @@
 local composer = require( "composer" )
 local scene = composer.newScene()
 
+local helpers = require ("helpers.helpers")
+
 -- include Corona's "physics" library
 local physics = require "physics"
 physics.start(); physics.pause()
@@ -15,6 +17,13 @@ physics.start(); physics.pause()
 
 -- forward declarations and other locals
 local screenW, screenH, halfW = display.contentWidth, display.contentHeight, display.contentWidth*0.5
+
+-- Size of bombs/slots for them
+local slotWidth = 60
+local halfSlotWidth = slotWidth / 2
+
+local bombs = {}
+local grid = {}
 
 function scene:create( event )
 
@@ -25,20 +34,36 @@ function scene:create( event )
 
 	local sceneGroup = self.view
 
-	-- create a grey rectangle as the backdrop
+	-- create background
 	local bg = display.newImageRect( "img/deck.jpg", screenW, screenH )
-	print(screenH)
 	bg.x = display.contentCenterX
 	bg.y = display.contentCenterY
 
-	-- Grid to lock bombs into
-	local background = display.newRect( 0, 0, screenW, screenH )
-	background.anchorX = 0
-	background.anchorY = 0
-	background:setFillColor( .5 )
+	-- Grid to lock bombs into grid
+	grid = {
+		{40, 40},
+		{120, 40},
+		{200, 40},
+		{280, 40}
+	}
+
+	for i, slot in ipairs(grid) do
+
+		local slotRect = display.newRect( slot[1] + slotWidth / 2, screenH - slot[2] - slotWidth / 2, slotWidth, slotWidth )
+		slotRect:setFillColor(.5)
+
+		sceneGroup:insert( slotRect )
+
+	end
+
 	
 	-- all display objects must be inserted into group
 	sceneGroup:insert( bg )
+
+	bg:toBack()
+
+	createBombs(sceneGroup)
+	slideBombs(sceneGroup)
 end
 
 
@@ -51,10 +76,54 @@ function scene:show( event )
 	elseif phase == "did" then
 		-- Called when the scene is now on screen
 		-- 
+
 		-- INSERT code here to make the scene come alive
 		-- e.g. start timers, begin animation, play audio, etc.
 		physics.start()
 	end
+end
+
+function createBombs(sceneGroup)
+
+	for i=1,4 do 
+		local bomb = display.newImageRect( "img/bomb.png", slotWidth, slotWidth )
+		table.insert(bombs, bomb)
+		bomb.x = slotWidth / 2 + i * slotWidth + screenW
+		bomb.y = screenH - slotWidth / 2 - 40
+
+		sceneGroup:insert( bomb )
+		
+	end
+
+end
+
+
+function slideBombs(sceneGroup)
+
+	local function slideOne(bomb, slot, callBack)
+		transition.to(bomb, {
+			x= slot[1] + halfSlotWidth,
+			y= screenH - slot[2] - halfSlotWidth,
+			rotation = -360,
+			onComplete = callBack
+		})
+	end
+
+	
+	local count = 1
+	local function slideEm()
+		slideOne(bombs[count], grid[count], function()
+
+			if (count ~= 4) then
+				count = count + 1
+				slideEm()
+			end
+
+		end)
+	end
+
+	slideEm()
+
 end
 
 function scene:hide( event )

@@ -69,6 +69,9 @@ function scene:show( event )
 		-- Called when the scene is still off screen and is about to move on screen
 	elseif phase == "did" then
 		-- Called when the scene is now on screen
+
+		-- DEBUG Go to first scene
+		composer.gotoScene( "scenes.level1", "fade", 1 )
 		-- 
 		-- INSERT code here to make the scene come alive
 		-- e.g. start timers, begin animation, play audio, etc.
