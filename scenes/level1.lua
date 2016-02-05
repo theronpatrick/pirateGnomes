@@ -19,7 +19,7 @@ physics.start(); physics.pause()
 local screenW, screenH, halfW = display.contentWidth, display.contentHeight, display.contentWidth*0.5
 
 -- Size of bombs/slots for them
-local slotWidth = 60
+local slotWidth = screenW / 5
 local halfSlotWidth = slotWidth / 2
 
 local bombs = {}
@@ -40,12 +40,8 @@ function scene:create( event )
 	bg.y = display.contentCenterY
 
 	-- Grid to lock bombs into grid
-	grid = {
-		{40, 40},
-		{120, 40},
-		{200, 40},
-		{280, 40}
-	}
+	buildGrid()
+
 
 	for i, slot in ipairs(grid) do
 
@@ -64,6 +60,34 @@ function scene:create( event )
 
 	createBombs(sceneGroup)
 	slideBombs(sceneGroup)
+
+	-- TODO: Put this in separate game manager class
+	Runtime:addEventListener( "enterFrame", test )
+
+end
+
+function buildGrid() 
+	-- Build 8x8 grid
+	local j
+	for i = 1, 16 do
+
+		j = math.floor((i - 1) / 4)
+
+		local newObject = {
+			(i * slotWidth) - (j * slotWidth * 4) - halfSlotWidth,
+			j * slotWidth + halfSlotWidth
+		}
+
+		table.insert(grid, newObject)
+
+	end
+
+	print("grid ")
+	print_r(grid)
+end
+
+function test()
+	-- Should really be somewhere else
 end
 
 
@@ -92,7 +116,7 @@ function objectTouch( event )
     if event.phase == "began" then
     	
     	touchedObject = target;
-        target.markX = target.x    -- store x location of object
+        --target.markX = target.x    -- store x location of object
         target.markY = target.y    -- store y location of object
     
     elseif event.phase == "moved" then
@@ -101,10 +125,11 @@ function objectTouch( event )
     		return
     	end
     
-        local x = (event.x - event.xStart) + target.markX
+        -- local x = (event.x - event.xStart) + target.markX
         local y = (event.y - event.yStart) + target.markY
         
-        target.x, target.y = x, y    -- move object based on calculations above
+        -- target.x = x   -- move object based on calculations above
+        target.y = y
     end
     
     return true
@@ -112,11 +137,13 @@ end
 
 function createBombs(sceneGroup)
 
-	for i=1,4 do 
+	for i=1,16 do 
 		local bomb = display.newImageRect( "img/bomb.png", slotWidth, slotWidth )
 		table.insert(bombs, bomb)
-		bomb.x = slotWidth / 2 + i * slotWidth + screenW
-		bomb.y = screenH - slotWidth / 2 - 40
+
+		local row = math.floor((i - 1) / 4)
+		bomb.x = halfSlotWidth + row * slotWidth + screenW
+		bomb.y = screenH - halfSlotWidth - slotWidth * row
 		bomb:addEventListener( "touch", objectTouch )
 
 		sceneGroup:insert( bomb )
@@ -127,31 +154,38 @@ end
 
 
 function slideBombs(sceneGroup)
-
-	local function slideOne(bomb, slot, callBack)
-		transition.to(bomb, {
-			x= slot[1] + halfSlotWidth,
-			y= screenH - slot[2] - halfSlotWidth,
-			rotation = -360,
-			onComplete = callBack
-		})
-	end
-
 	
-	local count = 1
-	local function slideEm()
-		slideOne(bombs[count], grid[count], function()
+	slideEntireRow(1)
+	slideEntireRow(2)
+	slideEntireRow(3)
+	slideEntireRow(4)
 
-			if (count ~= 4) then
-				count = count + 1
-				slideEm()
-			end
+end
 
-		end)
-	end
+function slideOneBomb(bomb, slot, callBack)
+	transition.to(bomb, {
+		x= slot[1] + halfSlotWidth,
+		y= screenH - slot[2] - halfSlotWidth,
+		rotation = -360,
+		onComplete = callBack
+	})
+end
 
-	slideEm()
+-- rowNum = which row
+-- position = which column
+function slideEntireRow(rowNum, columnNum)
 
+	if not columnNum then columnNum = 1 end
+
+	local count = (rowNum - 1) * 4 + columnNum
+
+	slideOneBomb(bombs[count], grid[count], function()
+
+		if (columnNum ~= 4) then
+			slideEntireRow(rowNum, columnNum + 1)
+		end
+
+	end)
 end
 
 function scene:hide( event )
