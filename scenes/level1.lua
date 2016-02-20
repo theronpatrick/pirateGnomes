@@ -25,6 +25,9 @@ local halfSlotWidth = slotWidth / 2
 local bombs = {}
 local grid = {}
 
+local bg = {}
+local mask = {}
+
 function scene:create( event )
 
 	-- Called when the scene's view does not exist.
@@ -35,9 +38,15 @@ function scene:create( event )
 	local sceneGroup = self.view
 
 	-- create background
-	local bg = display.newImageRect( "img/deck.jpg", screenW, screenH )
+	bg = display.newImageRect( "img/deck.jpg", screenW, screenH )
 	bg.x = display.contentCenterX
 	bg.y = display.contentCenterY
+
+	-- create mask to detect touches
+	mask = display.newRect( display.contentCenterX, display.contentCenterY, screenW, screenH )
+	mask.alpha = 0
+	mask.isHitTestable = true
+
 
 	-- Grid to lock bombs into grid
 	buildGrid()
@@ -61,8 +70,14 @@ function scene:create( event )
 	createBombs(sceneGroup)
 	slideBombs(sceneGroup)
 
+	sceneGroup:insert( mask )
+
+
+
 	-- TODO: Put this in separate game manager class
 	Runtime:addEventListener( "enterFrame", test )
+
+	mask:addEventListener("touch",backgroundTouched)
 
 end
 
@@ -82,8 +97,6 @@ function buildGrid()
 
 	end
 
-	print("grid ")
-	print_r(grid)
 end
 
 function test()
@@ -110,29 +123,24 @@ end
 -- touch listener function
 -- Need to store which one was touched because others will still have "moved" called when dragging over
 local touchedObject
-function objectTouch( event )
-	local target = event.target
+function objectTouch( e )
+	local target = e.target
 
-    if event.phase == "began" then
-    	
-    	touchedObject = target;
-        --target.markX = target.x    -- store x location of object
-        target.markY = target.y    -- store y location of object
-    
-    elseif event.phase == "moved" then
-
-    	if not (target == touchedObject) then
-    		return
-    	end
-    
-        -- local x = (event.x - event.xStart) + target.markX
-        local y = (event.y - event.yStart) + target.markY
-        
-        -- target.x = x   -- move object based on calculations above
-        target.y = y
-    end
+	if (e.phase=="began") then
+		print("touchy")
+		touchedObject = target
+	elseif (e.phase == "cancelled" or e.phase == "ended") then
+		touchedObject = nil
+	end
     
     return true
+end
+
+function backgroundTouched(e)
+	print("hrm " .. e.y)
+	if (e.phase=="moved" and touchedObject ~= nil) then
+	    touchedObject.y = e.y
+	end
 end
 
 function createBombs(sceneGroup)
@@ -144,6 +152,7 @@ function createBombs(sceneGroup)
 		local row = math.floor((i - 1) / 4)
 		bomb.x = halfSlotWidth + row * slotWidth + screenW
 		bomb.y = screenH - halfSlotWidth - slotWidth * row
+		
 		bomb:addEventListener( "touch", objectTouch )
 
 		sceneGroup:insert( bomb )
@@ -187,6 +196,7 @@ function slideEntireRow(rowNum, columnNum)
 
 	end)
 end
+
 
 function scene:hide( event )
 	local sceneGroup = self.view
