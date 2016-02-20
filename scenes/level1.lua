@@ -12,7 +12,9 @@ local helpers = require ("helpers.helpers")
 -- include Corona's "physics" library
 -- TODO: Take out if not using
 local physics = require "physics"
-physics.start(); physics.pause()
+
+physics.start()
+physics.pause()
 
 --------------------------------------------
 
@@ -28,6 +30,8 @@ local grid = {}
 
 local bg = {}
 local mask = {}
+
+local ship = {}
 
 function scene:create( event )
 
@@ -47,6 +51,15 @@ function scene:create( event )
 	mask = display.newRect( display.contentCenterX, display.contentCenterY, screenW, screenH )
 	mask.alpha = 0
 	mask.isHitTestable = true
+
+	-- build ship
+ 	ship = display.newImageRect( "img/ship.png", slotWidth * 3, slotWidth )
+	ship.x = slotWidth * 2
+	ship.y = slotWidth
+
+	local collisionFilter = { groupIndex = -2 }
+	physics.addBody( ship, {filter = collisionFilter} )
+	ship.gravityScale = 0
 
 
 	-- Grid to lock bombs into grid
@@ -203,6 +216,11 @@ function createBombs(sceneGroup)
 		bomb.y = screenH - halfSlotWidth - slotWidth * row
 		
 		bomb:addEventListener( "touch", objectTouch )
+
+		-- Add physics
+		local collisionFilter = { groupIndex = -1 }
+		physics.addBody( bomb, {filter = collisionFilter} )
+		bomb.gravityScale = 0
 
 		sceneGroup:insert( bomb )
 		
