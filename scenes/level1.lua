@@ -53,7 +53,7 @@ function scene:create( event )
 	mask.isHitTestable = true
 
 	-- build ship
- 	ship = display.newImageRect( "img/ship.png", slotWidth * 3, slotWidth )
+ 	ship = display.newImageRect( "img/ship.png", slotWidth * 2, slotWidth )
 	ship.x = slotWidth * 2
 	ship.y = slotWidth
 
@@ -64,7 +64,6 @@ function scene:create( event )
 
 	-- Grid to lock bombs into grid
 	buildGrid()
-
 
 	for i, slot in ipairs(grid) do
 
@@ -86,12 +85,49 @@ function scene:create( event )
 
 	sceneGroup:insert( mask )
 
-
-
 	-- TODO: Put this in separate game manager class
 	Runtime:addEventListener( "enterFrame", test )
 
 	mask:addEventListener("touch",backgroundTouched)
+
+end
+
+function createExplosionSprite(x, y) 
+	-- debug
+	local sheetOptions =
+	{
+	    width = 124,
+	    height = 118,
+	    numFrames = 8
+	}
+	local sheet = graphics.newImageSheet( "img/explosions.png", sheetOptions )
+	local sequences = {
+    -- consecutive frames sequence
+	    {
+	        name = "normalRun",
+	        start = 1,
+	        count = 8,
+	        time = 800,
+	        loopCount = 1,
+	        loopDirection = "forward"
+	    }
+	}
+	local explosion = display.newSprite( sheet, sequences )
+
+	explosion.x = x
+	explosion.y = y
+
+	explosion:play()
+
+	local function mySpriteListener( event )
+
+         if ( event.phase == "ended" ) then
+              explosion:removeSelf()
+              explosion = nil
+         end
+      end
+
+       explosion:addEventListener( "sprite", mySpriteListener )  
 
 end
 
@@ -186,9 +222,26 @@ function fireBomb(bomb)
 	transition.to(bomb, {
 		y = 0 - slotWidth,
 		onComplete = function()
-				bomb:removeSelf()
+				if (bomb) then
+					-- TODO: Ensure this is working properly
+					bomb:removeSelf()
+				end
 			end
 	})
+end
+
+function onBombHit( self, event )
+
+    if ( event.phase == "began" ) then
+
+        createExplosionSprite(self.x, self.y)
+
+        -- Set bomb to invisible, it will go off screen as if it were a miss and remove itself
+        self.alpha = 0
+
+    elseif ( event.phase == "ended" ) then
+        
+    end
 end
 
 
@@ -221,6 +274,9 @@ function createBombs(sceneGroup)
 		local collisionFilter = { groupIndex = -1 }
 		physics.addBody( bomb, {filter = collisionFilter} )
 		bomb.gravityScale = 0
+
+		bomb.collision = onBombHit
+		bomb:addEventListener( "collision", bomb )
 
 		sceneGroup:insert( bomb )
 		
