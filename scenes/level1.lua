@@ -132,7 +132,7 @@ function createExplosionSprite(x, y)
 end
 
 function buildGrid() 
-	-- Build 8x8 grid
+	-- Build 4x4 grid
 	local j
 	for i = 1, 16 do
 
@@ -170,8 +170,8 @@ function scene:show( event )
 	end
 end
 
--- touch listener function
--- Need to store which one was touched because others will still have "moved" called when dragging over
+-- Touch listener function
+-- Need to store which bomb was touched because others will still have "moved" called when dragging over
 local tBomb
 function objectTouch( e )
 	local target = e.target
@@ -179,7 +179,7 @@ function objectTouch( e )
 	if (e.phase=="began") then
 
 		tBomb = target
-		
+
 		if (tBomb.isMovingToSlot) then
 			return
 		end
@@ -188,6 +188,7 @@ function objectTouch( e )
 
 		tBomb.originalY = tBomb.y;
 	elseif (e.phase == "cancelled" or e.phase == "ended") then
+		print("ended")
 		if (not tBomb.isFiring) then
 			moveBombToSlot(tBomb)
 		end
@@ -199,6 +200,17 @@ end
 function backgroundTouched(e)
 
 	if (e.phase=="moved" and tBomb ~= nil and not tBomb.isFiring and not tBomb.isMovingToSlot and not tBomb.movedBackToSlot) then
+
+		-- Don't allow to move down
+		if e.y > tBomb.originalY then
+			return
+		end
+
+		-- Go back to slot if touch goes off bomb 
+		if (e.x > (tBomb.x + (slotWidth / 2)) or e.x < (tBomb.x - (slotWidth / 2))) then
+			moveBombToSlot(tBomb)
+		end
+
 	    tBomb.y = e.y
 	    checkBombToFire(tBomb)
 	end
