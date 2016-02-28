@@ -33,6 +33,9 @@ local mask = {}
 
 local ship = {}
 
+local sceneGroup;
+local bombGroup;
+
 function scene:create( event )
 
 	-- Called when the scene's view does not exist.
@@ -40,7 +43,10 @@ function scene:create( event )
 	-- INSERT code here to initialize the scene
 	-- e.g. add display objects to 'sceneGroup', add touch listeners, etc.
 
-	local sceneGroup = self.view
+	sceneGroup = self.view
+
+	-- Use separate group for bombs so they're always behind touch mask
+	bombGroup = display.newGroup()
 
 	-- create background
 	bg = display.newImageRect( "img/deck.jpg", screenW, screenH )
@@ -70,19 +76,22 @@ function scene:create( event )
 		local slotRect = display.newRect( slot[1] + slotWidth / 2, screenH - slot[2] - slotWidth / 2, slotWidth, slotWidth )
 		slotRect:setFillColor(.5)
 
-		sceneGroup:insert( slotRect )
+		bombGroup:insert( slotRect )
 
 	end
 
 	
 	-- all display objects must be inserted into group
+
 	sceneGroup:insert( bg )
 
 	bg:toBack()
 
-	createBombs(sceneGroup)
-	slideBombs(sceneGroup)
+	createBombs()
+	slideBombs()
 
+
+	sceneGroup:insert(bombGroup)
 	sceneGroup:insert( mask )
 
 	-- TODO: Put this in separate game manager class
@@ -155,7 +164,6 @@ end
 
 
 function scene:show( event )
-	local sceneGroup = self.view
 	local phase = event.phase
 	
 	if phase == "will" then
@@ -188,7 +196,6 @@ function objectTouch( e )
 
 		tBomb.originalY = tBomb.y;
 	elseif (e.phase == "cancelled" or e.phase == "ended") then
-		print("ended")
 		if (not tBomb.isFiring) then
 			moveBombToSlot(tBomb)
 		end
@@ -240,6 +247,43 @@ function fireBomb(bomb)
 				end
 			end
 	})
+
+	slideNewBomb(bomb)
+
+end
+
+-- Slide new bomb into row that was occupied by old 'bomb' after it's fired (or explodes)
+function slideNewBomb(oldBomb)
+
+	-- Slide all bombs to the right over one, then slide new bomb in on right hand side
+	local numBombsToSlide = 4 - oldBomb.column
+	-- Keep track of bombs to update their indices
+	local bombsToSlide = {}
+
+	-- Slide bombs to the right of old one
+	for i = 1, numBombsToSlide do
+		local index = oldBomb.column + ((oldBomb.row - 1) * 4)
+		local bombToSlide = bombs[index + i]
+		table.insert(bombsToSlide, bombToSlide)
+		slideOneBomb(bombToSlide, grid[index + i - 1])
+	end
+
+	-- TODO: Set indices correctly and make sure new bombs can be fired
+	for j, bombToSlide in ipairs(bombsToSlide) do
+
+		local newIndex = bombToSlide.index - 1
+		bombToSlide.column = bombToSlide.column - 1
+		bombToSlide.index = newIndex
+		bombs[newIndex] = bombToSlide
+
+	end
+
+
+	-- Slide new bomb
+	local newBombIndex = oldBomb.row * 4
+	local newBomb = createBomb(newBombIndex)
+	slideOneBomb(newBomb, grid[newBombIndex])
+
 end
 
 function onBombHit( self, event )
@@ -269,36 +313,51 @@ function moveBombToSlot(bomb)
 	})
 end
 
+function createBomb(index)
 
-function createBombs(sceneGroup)
+	local row = math.floor((index - 1) / 4 + 1)
+	local column = index - (row - 1) * 4
+
+	local bomb = display.newImageRect( "img/bomb.png", slotWidth, slotWidth )
+
+	bombs[index] = bomb
+
+	bomb.x = halfSlotWidth + screenW
+	bomb.y = screenH - slotWidth * row
+
+	bomb.row = row
+	bomb.column = column
+	bomb.index = index
+	
+	bomb:addEventListener( "touch", objectTouch )
+
+	-- Add physics
+	local collisionFilter = { groupIndex = -1 }
+	physics.addBody( bomb, {filter = collisionFilter} )
+	bomb.gravityScale = 0
+
+	bomb.collision = onBombHit
+	bomb:addEventListener( "collision", bomb )
+
+	bombGroup:insert( bomb )
+
+	return bomb
+end
+
+
+function createBombs()
 
 	for i=1,16 do 
-		local bomb = display.newImageRect( "img/bomb.png", slotWidth, slotWidth )
-		table.insert(bombs, bomb)
 
-		local row = math.floor((i - 1) / 4)
-		bomb.x = halfSlotWidth + row * slotWidth + screenW
-		bomb.y = screenH - halfSlotWidth - slotWidth * row
-		
-		bomb:addEventListener( "touch", objectTouch )
-
-		-- Add physics
-		local collisionFilter = { groupIndex = -1 }
-		physics.addBody( bomb, {filter = collisionFilter} )
-		bomb.gravityScale = 0
-
-		bomb.collision = onBombHit
-		bomb:addEventListener( "collision", bomb )
-
-		sceneGroup:insert( bomb )
+		createBomb(i)
 		
 	end
 
 end
 
 
-function slideBombs(sceneGroup)
-	
+function slideBombs()
+
 	slideEntireRow(1)
 	slideEntireRow(2)
 	slideEntireRow(3)
@@ -310,13 +369,11 @@ function slideOneBomb(bomb, slot, callBack)
 	transition.to(bomb, {
 		x= slot[1] + halfSlotWidth,
 		y= screenH - slot[2] - halfSlotWidth,
-		rotation = -360,
+		rotation = bomb.rotation - 360,
 		onComplete = callBack
 	})
 end
 
--- rowNum = which row
--- position = which column
 function slideEntireRow(rowNum, columnNum)
 
 	if not columnNum then columnNum = 1 end
@@ -356,7 +413,6 @@ function scene:destroy( event )
 	-- 
 	-- INSERT code here to cleanup the scene
 	-- e.g. remove display objects, remove touch listeners, save state, etc.
-	local sceneGroup = self.view
 	
 	package.loaded[physics] = nil
 	physics = nil
