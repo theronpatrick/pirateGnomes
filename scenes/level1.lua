@@ -9,6 +9,9 @@ local scene = composer.newScene()
 
 local helpers = require ("helpers.helpers")
 
+-- For things like slot width/screen size
+require("globals.globals")
+
 -- include Corona's "physics" library
 -- TODO: Take out if not using
 local physics = require "physics"
@@ -16,14 +19,10 @@ local physics = require "physics"
 physics.start()
 physics.pause()
 
+-- Object Factories
+local Bomb = require("objects.Bomb")
+
 --------------------------------------------
-
--- forward declarations and other locals
-local screenW, screenH, halfW = display.contentWidth, display.contentHeight, display.contentWidth*0.5
-
--- Size of bombs/slots for them
-local slotWidth = screenW / 5
-local halfSlotWidth = slotWidth / 2
 
 local bombs = {}
 local grid = {}
@@ -239,13 +238,7 @@ function fireBomb(bomb)
 	bomb.isFiring = true
 
 	transition.to(bomb, {
-		y = 0 - slotWidth,
-		onComplete = function()
-				if (bomb) then
-					-- TODO: Ensure this is working properly
-					bomb:removeSelf()
-				end
-			end
+		y = 0 - slotWidth
 	})
 
 	slideNewBomb(bomb)
@@ -286,20 +279,6 @@ function slideNewBomb(oldBomb)
 
 end
 
-function onBombHit( self, event )
-
-    if ( event.phase == "began" ) then
-
-        createExplosionSprite(self.x, self.y)
-
-        -- Set bomb to invisible, it will go off screen as if it were a miss and remove itself
-        self.alpha = 0
-
-    elseif ( event.phase == "ended" ) then
-        
-    end
-end
-
 
 function moveBombToSlot(bomb) 
 	bomb.isMovingToSlot = true
@@ -315,29 +294,10 @@ end
 
 function createBomb(index)
 
-	local row = math.floor((index - 1) / 4 + 1)
-	local column = index - (row - 1) * 4
+	local bomb = Bomb:new(index)
 
-	local bomb = display.newImageRect( "img/bomb.png", slotWidth, slotWidth )
-
+	-- Add new bomb to our bombs array, and insert it into scene
 	bombs[index] = bomb
-
-	bomb.x = halfSlotWidth + screenW
-	bomb.y = screenH - slotWidth * row
-
-	bomb.row = row
-	bomb.column = column
-	bomb.index = index
-	
-	bomb:addEventListener( "touch", objectTouch )
-
-	-- Add physics
-	local collisionFilter = { groupIndex = -1 }
-	physics.addBody( bomb, {filter = collisionFilter} )
-	bomb.gravityScale = 0
-
-	bomb.collision = onBombHit
-	bomb:addEventListener( "collision", bomb )
 
 	bombGroup:insert( bomb )
 
@@ -366,10 +326,24 @@ function slideBombs()
 end
 
 function slideOneBomb(bomb, slot, callBack)
+
+	print("rotation is " .. bomb.rotation)
+
+	-- Callback is optional
+	if not callBack then
+		callBack = function()
+		end
+	end
+
+	-- We can slide mid-rotation, so find next interval of 360 to rotate to. 
+	-- Firing before slide is completed could still be improved
+	local rotationAmount = math.abs(math.ceil(bomb.rotation / 360)) + 1
+	rotationAmount = rotationAmount * 360;
+
 	transition.to(bomb, {
 		x= slot[1] + halfSlotWidth,
 		y= screenH - slot[2] - halfSlotWidth,
-		rotation = bomb.rotation - 360,
+		rotation = 0 - rotationAmount,
 		onComplete = callBack
 	})
 end
