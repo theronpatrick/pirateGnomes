@@ -2,12 +2,34 @@
 
 local Bomb = {}
 
+-- Set random seed
+math.randomseed( os.time() )
+
 function Bomb:new(index)
 
 	local row = math.floor((index - 1) / 4 + 1)
 	local column = index - (row - 1) * 4
 
-	local bomb = display.newImageRect( "img/bomb.png", slotWidth, slotWidth )
+	local imagePath;
+
+	-- For now, randomize which bomb icon to use
+	local random = math.random( 1, 5 )
+
+	print("random is " .. random)
+
+	if random == 1 then
+		imagePath = "img/bomb.png"
+	elseif random == 2 then
+		imagePath = "img/bomb-red.png"
+	elseif random == 3 then
+		imagePath = "img/bomb-green.png"
+	elseif random == 4 then
+		imagePath = "img/bomb-blue.png"
+	elseif random == 5 then
+		imagePath = "img/bomb-white.png"
+	end
+
+	local bomb = display.newImageRect( imagePath, slotWidth, slotWidth )
 
 	bomb.x = halfSlotWidth + screenW
 	bomb.y = screenH - slotWidth * row
