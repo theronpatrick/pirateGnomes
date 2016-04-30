@@ -68,6 +68,7 @@ function scene:create( event )
 
 
 	-- Grid to lock bombs into grid
+	-- TODO: Handle grid management/building in separate class
 	buildGrid()
 
 	for i, slot in ipairs(grid) do
@@ -96,6 +97,7 @@ function scene:create( event )
 	-- TODO: Put this in separate game manager class
 	Runtime:addEventListener( "enterFrame", test )
 
+	-- backgroundTouched in Bomb.lua
 	mask:addEventListener("touch",backgroundTouched)
 
 end
@@ -175,74 +177,6 @@ function scene:show( event )
 		-- e.g. start timers, begin animation, play audio, etc.
 		physics.start()
 	end
-end
-
--- Touch listener function
--- Need to store which bomb was touched because others will still have "moved" called when dragging over
-local tBomb
-function objectTouch( e )
-	local target = e.target
-
-	if (e.phase=="began") then
-
-		tBomb = target
-
-		if (tBomb.isMovingToSlot) then
-			return
-		end
-
-		tBomb.movedBackToSlot = false
-
-		tBomb.originalY = tBomb.y;
-	elseif (e.phase == "cancelled" or e.phase == "ended") then
-		if (not tBomb.isFiring) then
-			moveBombToSlot(tBomb)
-		end
-	end
-    
-    return true
-end
-
-function backgroundTouched(e)
-
-	if (e.phase=="moved" and tBomb ~= nil and not tBomb.isFiring and not tBomb.isMovingToSlot and not tBomb.movedBackToSlot) then
-
-		-- Don't allow to move down
-		if e.y > tBomb.originalY then
-			return
-		end
-
-		-- Go back to slot if touch goes off bomb 
-		if (e.x > (tBomb.x + (slotWidth / 2)) or e.x < (tBomb.x - (slotWidth / 2))) then
-			moveBombToSlot(tBomb)
-		end
-
-	    tBomb.y = e.y
-	    checkBombToFire(tBomb)
-	end
-end
-
-function checkBombToFire(bomb) 
-	if (bomb.y < bomb.originalY - slotWidth) then
-
-		fireBomb(bomb)
-
-	elseif (bomb.y > bomb.originalY + slotWidth) then
-
-		moveBombToSlot(bomb)
-
-	end
-end
-
-function fireBomb(bomb) 
-	bomb.isFiring = true
-
-	transition.to(bomb, {
-		y = 0 - slotWidth
-	})
-
-	slideNewBomb(bomb)
-
 end
 
 -- Slide new bomb into row that was occupied by old 'bomb' after it's fired (or explodes)
