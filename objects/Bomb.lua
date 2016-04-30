@@ -7,15 +7,13 @@ math.randomseed( os.time() )
 
 function Bomb:new(index)
 
-	local row = math.floor((index - 1) / 4 + 1)
-	local column = index - (row - 1) * 4
+	local row = math.floor((index - 1) / 5 + 1)
+	local column = index - (row - 1) * 5
 
 	local imagePath;
 
 	-- For now, randomize which bomb icon to use
 	local random = math.random( 1, 5 )
-
-	print("random is " .. random)
 
 	if random == 1 then
 		imagePath = "img/bomb.png"
@@ -60,8 +58,6 @@ Bomb.bombHit = function( self, event )
         -- Set bomb to invisible, it will go off screen as if it were a miss and remove itself
         --self.alpha = 0
         
-        print("interesteing")
-
         display.remove(self)
         self = nil
 

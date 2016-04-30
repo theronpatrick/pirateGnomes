@@ -140,14 +140,14 @@ function createExplosionSprite(x, y)
 end
 
 function buildGrid() 
-	-- Build 4x4 grid
+	-- Build 5x5 grid
 	local j
-	for i = 1, 16 do
+	for i = 1, 25 do
 
-		j = math.floor((i - 1) / 4)
+		j = math.floor((i - 1) / 5)
 
 		local newObject = {
-			(i * slotWidth) - (j * slotWidth * 4) - halfSlotWidth,
+			(i * slotWidth) - (j * slotWidth * 5) - halfSlotWidth,
 			j * slotWidth + halfSlotWidth
 		}
 
@@ -249,13 +249,13 @@ end
 function slideNewBomb(oldBomb)
 
 	-- Slide all bombs to the right over one, then slide new bomb in on right hand side
-	local numBombsToSlide = 4 - oldBomb.column
+	local numBombsToSlide = 5 - oldBomb.column
 	-- Keep track of bombs to update their indices
 	local bombsToSlide = {}
 
 	-- Slide bombs to the right of old one
 	for i = 1, numBombsToSlide do
-		local index = oldBomb.column + ((oldBomb.row - 1) * 4)
+		local index = oldBomb.column + ((oldBomb.row - 1) * 5)
 		local bombToSlide = bombs[index + i]
 		table.insert(bombsToSlide, bombToSlide)
 		slideOneBomb(bombToSlide, grid[index + i - 1])
@@ -273,7 +273,7 @@ function slideNewBomb(oldBomb)
 
 
 	-- Slide new bomb
-	local newBombIndex = oldBomb.row * 4
+	local newBombIndex = oldBomb.row * 5
 	local newBomb = createBomb(newBombIndex)
 	slideOneBomb(newBomb, grid[newBombIndex])
 
@@ -307,7 +307,7 @@ end
 
 function createBombs()
 
-	for i=1,16 do 
+	for i=1, 25 do 
 
 		createBomb(i)
 		
@@ -322,12 +322,11 @@ function slideBombs()
 	slideEntireRow(2)
 	slideEntireRow(3)
 	slideEntireRow(4)
+	slideEntireRow(5)
 
 end
 
 function slideOneBomb(bomb, slot, callBack)
-
-	print("rotation is " .. bomb.rotation)
 
 	-- Callback is optional
 	if not callBack then
@@ -352,11 +351,11 @@ function slideEntireRow(rowNum, columnNum)
 
 	if not columnNum then columnNum = 1 end
 
-	local count = (rowNum - 1) * 4 + columnNum
+	local count = (rowNum - 1) * 5 + columnNum
 
 	slideOneBomb(bombs[count], grid[count], function()
 
-		if (columnNum ~= 4) then
+		if (columnNum ~= 5) then
 			slideEntireRow(rowNum, columnNum + 1)
 		end
 

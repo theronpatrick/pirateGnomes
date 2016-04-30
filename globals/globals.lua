@@ -2,5 +2,5 @@
 screenW, screenH, halfW = display.contentWidth, display.contentHeight, display.contentWidth*0.5
 
 -- Size of bombs/slots for them
-slotWidth = screenW / 5
+slotWidth = screenW / 6
 halfSlotWidth = slotWidth / 2
