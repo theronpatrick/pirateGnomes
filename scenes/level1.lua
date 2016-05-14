@@ -180,16 +180,16 @@ function scene:show( event )
 end
 
 -- Slide new bomb into row that was occupied by old 'bomb' after it's fired (or explodes)
-function slideNewBomb(oldBomb)
+function slideNewBomb(oldBombColumn, oldBombRow)
 
 	-- Slide all bombs to the right over one, then slide new bomb in on right hand side
-	local numBombsToSlide = 5 - oldBomb.column
+	local numBombsToSlide = 5 - oldBombColumn
 	-- Keep track of bombs to update their indices
 	local bombsToSlide = {}
 
 	-- Slide bombs to the right of old one
 	for i = 1, numBombsToSlide do
-		local index = oldBomb.column + ((oldBomb.row - 1) * 5)
+		local index = oldBombColumn + ((oldBombRow - 1) * 5)
 		local bombToSlide = bombs[index + i]
 		table.insert(bombsToSlide, bombToSlide)
 		slideOneBomb(bombToSlide, grid[index + i - 1])
@@ -207,10 +207,14 @@ function slideNewBomb(oldBomb)
 
 
 	-- Slide new bomb
-	local newBombIndex = oldBomb.row * 5
+	local newBombIndex = oldBombRow * 5
 	local newBomb = createBomb(newBombIndex)
 	slideOneBomb(newBomb, grid[newBombIndex])
 
+end
+
+local function setOriginalCoordinates(bomb)
+	bomb.originalY = bomb.y
 end
 
 
@@ -277,7 +281,10 @@ function slideOneBomb(bomb, slot, callBack)
 		x= slot[1] + halfSlotWidth,
 		y= screenH - slot[2] - halfSlotWidth,
 		rotation = 0 - rotationAmount,
-		onComplete = callBack
+		onComplete = function()
+			callBack()
+			bomb.originalY = bomb.y
+		end
 	})
 end
 

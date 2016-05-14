@@ -5,6 +5,9 @@ local Bomb = {}
 -- Set random seed
 math.randomseed( os.time() )
 
+-- Need to store which bomb was touched because others will still have "moved" called when dragging over
+local tBomb = {}
+
 function Bomb:new(index)
 
 	local row = math.floor((index - 1) / 5 + 1)
@@ -36,8 +39,6 @@ function Bomb:new(index)
 	bomb.column = column
 	bomb.index = index
 	
-	bomb:addEventListener( "touch", objectTouch )
-
 	-- Add physics
 	local collisionFilter = { groupIndex = -1 }
 	physics.addBody( bomb, {filter = collisionFilter} )
@@ -46,40 +47,41 @@ function Bomb:new(index)
 	bomb.collision = Bomb.bombHit
 	bomb:addEventListener( "collision", bomb )
 
-	return bomb
-end
-
--- Touch listener function
--- Need to store which bomb was touched because others will still have "moved" called when dragging over
-local tBomb
-function objectTouch( e )
-	local target = e.target
-
-	if (e.phase=="began") then
-
-		tBomb = target
-
-		if (tBomb.isMovingToSlot) then
-			return
-		end
-
-		tBomb.movedBackToSlot = false
-
-		tBomb.originalY = tBomb.y;
-	elseif (e.phase == "cancelled" or e.phase == "ended") then
-			moveBombToSlot(tBomb)
-		end
+	local function bombTouched(e)
+		print("bomb touched")
+		print_r(e.target)
+		tBomb = e.target
 	end
-    
-    return true
+
+	bomb:addEventListener( "touch", bombTouched )
+
+	bomb.fire =  function()
+		bomb.isFiring = true
+
+		transition.to(bomb, {
+			y = 0 - slotWidth
+		})
+
+		slideNewBomb(bomb.column, bomb.row)
+
+	end
+
+	return bomb
 end
 
 function backgroundTouched(e)
 
-	if (e.phase=="moved" and tBomb ~= nil and not tBomb.isFiring and not tBomb.isMovingToSlot and not tBomb.movedBackToSlot) then
+	print("wtf")
+	print_r(tBomb)
+
+	if (e.phase=="moved" and 
+		tBomb ~= nil and not 
+		tBomb.isFiring and not
+		tBomb.isMovingToSlot 
+		and not tBomb.movedBackToSlot) then
 
 		-- Don't allow to move down
-		if e.y > tBomb.originalY then
+		if not tBomb.originalY or e.y > tBomb.originalY then
 			return
 		end
 
@@ -93,10 +95,11 @@ function backgroundTouched(e)
 	end
 end
 
+
 function checkBombToFire(bomb) 
 	if (bomb.y < bomb.originalY - slotWidth / 2) then
 
-		fireBomb(bomb)
+		bomb:fire()
 
 	elseif (bomb.y > bomb.originalY + slotWidth) then
 
@@ -104,17 +107,6 @@ function checkBombToFire(bomb)
 		moveBombToSlot(bomb)
 
 	end
-end
-
-function fireBomb(bomb) 
-	bomb.isFiring = true
-
-	transition.to(bomb, {
-		y = 0 - slotWidth
-	})
-
-	slideNewBomb(bomb)
-
 end
 
 Bomb.bombHit = function( self, event )
@@ -128,6 +120,8 @@ Bomb.bombHit = function( self, event )
         
         display.remove(self)
         self = nil
+
+        tBomb = nil
 
     elseif ( event.phase == "ended" ) then
 
